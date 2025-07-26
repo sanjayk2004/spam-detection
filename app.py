@@ -1,90 +1,59 @@
-# 📦 Install necessary libraries
-!pip install streamlit pyngrok scikit-learn pandas numpy nltk --quiet
-
-# 📁 Import Libraries
+from flask import Flask, request, render_template
+import pickle
 import pandas as pd
-import numpy as np
-import string
-import pickle
-import nltk
-nltk.download('stopwords')
-from nltk.corpus import stopwords
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import classification_report
-from pyngrok import ngrok
+from sklearn.metrics import accuracy_score
+import os
 
-# 📊 Load Dataset
-df = pd.read_csv('https://github.com/sanjayk2004/spam-detection/blob/main/SMSSpamCollection')
-df.columns = ['label', 'message']
-
-# 🧹 Clean Text Function
-def clean_text(text):
-    text = text.lower()
-    text = ''.join([char for char in text if char not in string.punctuation])
-    tokens = text.split()
-    tokens = [word for word in tokens if word not in stopwords.words('english')]
-    return ' '.join(tokens)
-
-# 🧹 Apply Cleaning
-df['cleaned'] = df['message'].apply(clean_text)
-
-# 🔡 Vectorize Text
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(df['cleaned'])
-y = df['label'].map({'ham': 0, 'spam': 1})
-
-# 🧠 Train Model
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model = MultinomialNB()
-model.fit(X_train, y_train)
-
-# 📈 Print Evaluation
-y_pred = model.predict(X_test)
-print("📊 Model Evaluation:\n", classification_report(y_test, y_pred))
-
-# 💾 Save Model and Vectorizer
-with open('spam_model.pkl', 'wb') as f:
-    pickle.dump(model, f)
-with open('vectorizer.pkl', 'wb') as f:
-    pickle.dump(vectorizer, f)
-
-# 📝 Create Streamlit App
-app_code = '''
-import streamlit as st
-import pickle
-
-# Load model and vectorizer
+# Load the trained model and vectorizer
 with open("spam_model.pkl", "rb") as f:
     model = pickle.load(f)
 
 with open("vectorizer.pkl", "rb") as f:
     vectorizer = pickle.load(f)
 
-st.set_page_config(page_title="Spam Classifier", page_icon="📱")
-st.title("📱 Spam Message Classifier")
-st.write("Enter an SMS message to check if it's spam or not:")
+# Initialize the Flask app
+app = Flask(__name__)
 
-user_input = st.text_area("✉️ Message:")
+# Route for home page
+@app.route('/')
+def home():
+    return render_template('index.html', prediction=None, accuracy=None)
 
-if st.button("🔍 Predict"):
-    if user_input:
-        cleaned = user_input.lower()
-        vectorized = vectorizer.transform([cleaned])
-        prediction = model.predict(vectorized)[0]
-        st.success("🚨 Spam!" if prediction == 1 else "✅ Not Spam.")
-    else:
-        st.warning("⚠️ Please enter a message.")
-'''
+# Route for predicting spam
+@app.route('/predict', methods=['POST'])
+def predict():
+    message = request.form['message']
+    if not message.strip():
+        return render_template('index.html', prediction="⚠️ Please enter a message.", accuracy=None, message=message)
 
-# 💾 Write Streamlit app to file
-with open("app.py", "w") as f:
-    f.write(app_code)
+    # Minimal preprocessing
+    cleaned_message = message.lower()
+    transformed = vectorizer.transform([cleaned_message])
+    prediction = model.predict(transformed)[0]
 
-# 🚀 Run Streamlit App
-!streamlit run app.py &> /dev/null &
+    result = "🚨 This message is Spam!" if prediction == 1 else "✅ This message is Not Spam."
+    return render_template('index.html', prediction=result, accuracy=None, message=message)
 
-# 🌐 Setup Ngrok Tunnel
-public_url = ngrok.connect(8501)
-print(f"🔗 Click here to access the Spam Detector Web App:\n{public_url}")
+# Route to evaluate model accuracy on the dataset
+@app.route('/accuracy')
+def accuracy():
+    if not os.path.exists("SMSSpamCollection"):
+        return render_template("index.html", prediction=None, accuracy="Dataset not found.")
+
+    # Load dataset
+    df = pd.read_csv("SMSSpamCollection", sep='\t', header=None, names=['label', 'message'])
+    df['label_num'] = df['label'].map({'ham': 0, 'spam': 1})
+    df['message'] = df['message'].str.lower()
+
+    X = vectorizer.transform(df['message'])
+    y_true = df['label_num']
+    y_pred = model.predict(X)
+
+    acc = accuracy_score(y_true, y_pred)
+    acc_percent = round(acc * 100, 2)
+
+    return render_template('index.html', prediction=None, accuracy=f"📊 Model Accuracy: {acc_percent}%", message=None)
+
+# Run the app
+if __name__ == '__main__':
+    app.run(debug=True)
