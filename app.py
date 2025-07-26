@@ -3,7 +3,7 @@ import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Load model and vectorizer
-with open("spam_model.pkl", "rb") as model_file:
+with open("spam_model(1).pkl", "rb") as model_file:
     model = pickle.load(model_file)
 
 with open("vectorizer.pkl", "rb") as vec_file:
