@@ -4,11 +4,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Load model and vectorizer
 with open("spam_model(1).pkl", "rb") as model_file:
-    model = pickle.load(model_file)
+    model = pickle.load(f)
 
 with open("vectorizer.pkl", "rb") as vec_file:
-    vectorizer = pickle.load(vec_file)
-
+    vectorizer = pickle.load(f)
 # App UI
 st.set_page_config(page_title="Spam Message Classifier", page_icon="📩")
 st.title("📩 Spam Message Classifier")
