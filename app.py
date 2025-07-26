@@ -6,7 +6,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 with open("https://github.com/sanjayk2004/spam-detection/blob/main/vectorizer.pkl", "rb") as model_file:
     model = pickle.load(model_file)
 
-with open("vectorizer.pkl", "rb") as vec_file:
+with open("https://github.com/sanjayk2004/spam-detection/blob/main/vectorizer.pkl", "rb") as vec_file:
     vectorizer = pickle.load(vec_file)
 
 # App UI
