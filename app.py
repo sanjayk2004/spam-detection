@@ -1,59 +1,30 @@
-from flask import Flask, request, render_template
+import streamlit as st
 import pickle
-import pandas as pd
-from sklearn.metrics import accuracy_score
-import os
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Load the trained model and vectorizer
-with open("spam_model.pkl", "rb") as f:
-    model = pickle.load(f)
+# Load model and vectorizer
+with open("spam_model.pkl", "rb") as model_file:
+    model = pickle.load(model_file)
 
-with open("vectorizer.pkl", "rb") as f:
-    vectorizer = pickle.load(f)
+with open("vectorizer.pkl", "rb") as vec_file:
+    vectorizer = pickle.load(vec_file)
 
-# Initialize the Flask app
-app = Flask(__name__)
+# App UI
+st.set_page_config(page_title="Spam Message Classifier", page_icon="📩")
+st.title("📩 Spam Message Classifier")
 
-# Route for home page
-@app.route('/')
-def home():
-    return render_template('index.html', prediction=None, accuracy=None)
+message = st.text_area("Enter your message:")
 
-# Route for predicting spam
-@app.route('/predict', methods=['POST'])
-def predict():
-    message = request.form['message']
-    if not message.strip():
-        return render_template('index.html', prediction="⚠️ Please enter a message.", accuracy=None, message=message)
+if st.button("Predict"):
+    if message.strip() == "":
+        st.warning("Please enter a valid message.")
+    else:
+        transformed = vectorizer.transform([message.lower()])
+        prediction = model.predict(transformed)[0]
+        if prediction == 1:
+            st.error("🚨 This is SPAM!")
+        else:
+            st.success("✅ This is NOT Spam.")
 
-    # Minimal preprocessing
-    cleaned_message = message.lower()
-    transformed = vectorizer.transform([cleaned_message])
-    prediction = model.predict(transformed)[0]
-
-    result = "🚨 This message is Spam!" if prediction == 1 else "✅ This message is Not Spam."
-    return render_template('index.html', prediction=result, accuracy=None, message=message)
-
-# Route to evaluate model accuracy on the dataset
-@app.route('/accuracy')
-def accuracy():
-    if not os.path.exists("SMSSpamCollection"):
-        return render_template("index.html", prediction=None, accuracy="Dataset not found.")
-
-    # Load dataset
-    df = pd.read_csv("SMSSpamCollection", sep='\t', header=None, names=['label', 'message'])
-    df['label_num'] = df['label'].map({'ham': 0, 'spam': 1})
-    df['message'] = df['message'].str.lower()
-
-    X = vectorizer.transform(df['message'])
-    y_true = df['label_num']
-    y_pred = model.predict(X)
-
-    acc = accuracy_score(y_true, y_pred)
-    acc_percent = round(acc * 100, 2)
-
-    return render_template('index.html', prediction=None, accuracy=f"📊 Model Accuracy: {acc_percent}%", message=None)
-
-# Run the app
-if __name__ == '__main__':
-    app.run(debug=True)
+st.markdown("---")
+st.caption("Built with ❤️ using Streamlit")
