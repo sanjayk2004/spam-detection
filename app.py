@@ -16,7 +16,7 @@ from sklearn.metrics import classification_report
 from pyngrok import ngrok
 
 # 📊 Load Dataset
-df = pd.read_csv('https://raw.githubusercontent.com/amankharwal/Website-data/master/sms-spam-collection-dataset.csv')
+df = pd.read_csv('https://github.com/sanjayk2004/spam-detection/blob/main/SMSSpamCollection')
 df.columns = ['label', 'message']
 
 # 🧹 Clean Text Function
