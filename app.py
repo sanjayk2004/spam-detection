@@ -3,11 +3,14 @@ import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Load model and vectorizer
-with open("https://github.com/sanjayk2004/spam-detection/blob/main/spam_model%20.pkl", "rb") as model_file:
-    model = pickle.load(model_file)
-
-with open("https://github.com/sanjayk2004/spam-detection/blob/main/vectorizer.pkl", "rb") as vec_file:
-    vectorizer = pickle.load(vec_file)
+try:
+    with open("spam_model.pkl", "rb") as model_file:
+        model = pickle.load(model_file)
+    with open("vectorizer.pkl", "rb") as vec_file:
+        vectorizer = pickle.load(vec_file)
+except FileNotFoundError as e:
+    st.error(f"❌ File not found: {e}")
+    st.stop()
 
 # App UI
 st.set_page_config(page_title="Spam Message Classifier", page_icon="📩")
@@ -17,10 +20,13 @@ message = st.text_area("Enter your message:")
 
 if st.button("Predict"):
     if message.strip() == "":
-        st.warning("Please enter a valid message.")
+        st.warning("⚠️ Please enter a valid message.")
     else:
+        # Transform and predict
         transformed = vectorizer.transform([message.lower()])
         prediction = model.predict(transformed)[0]
+
+        # Display result
         if prediction == 1:
             st.error("🚨 This is SPAM!")
         else:
